@@ -1,0 +1,2426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#8b7355" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Pier Pressure" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon.svg" />
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=Patrick+Hand&display=swap" rel="stylesheet" />
+  <title>Pier Pressure</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      font-family: 'Patrick Hand', cursive;
+      background: #1a1a2e;
+      overflow: hidden;
+      user-select: none;
+      color: #3d3520;
+    }
+    #gameCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+      position: relative;
+      z-index: 0;
+    }
+    /* Shop: separate Menu button (when closed) and full panel (when open) */
+    #shopMenuBtn {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 1100;
+      padding: 12px 18px;
+      min-height: 44px;
+      min-width: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border: none;
+      background: linear-gradient(180deg, #f6f1e3 0%, #ebe4d0 100%);
+      border: 1px solid #c9b896;
+      border-left: 4px solid #8b7355;
+      border-radius: 2px 10px 10px 2px;
+      box-shadow: 2px 2px 0 rgba(0,0,0,0.06), 4px 4px 20px rgba(0,0,0,0.15);
+      color: #2f2818;
+      font-family: 'Patrick Hand', cursive;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      pointer-events: auto;
+    }
+    #shopMenuBtn:hover { background: linear-gradient(180deg, #ebe4d0 0%, #e0d8c0 100%); }
+    #shopMenuBtn.shop-menu-btn-hidden { display: none !important; }
+
+    #shopPanel {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      width: 300px;
+      max-width: calc(100vw - 32px);
+      max-height: 88vh;
+      background: linear-gradient(180deg, #f6f1e3 0%, #ebe4d0 100%);
+      backdrop-filter: blur(10px);
+      border: 1px solid #c9b896;
+      border-left: 4px solid #8b7355;
+      border-radius: 2px 10px 10px 2px;
+      box-shadow: 2px 2px 0 rgba(0,0,0,0.06), 4px 4px 20px rgba(0,0,0,0.15);
+      color: #2f2818;
+      font-family: 'Patrick Hand', cursive;
+      overflow-y: auto;
+      overflow-x: hidden;
+      z-index: 1100;
+      pointer-events: auto;
+      isolation: isolate;
+    }
+    #shopPanel.shop-panel-hidden { display: none !important; }
+
+    .shopPanelCloseBar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(139, 115, 85, 0.35);
+      background: linear-gradient(180deg, rgba(255,255,255,0.3) 0%, transparent 100%);
+    }
+    .shopPanelCloseBar span { font-weight: 600; font-size: 0.95rem; color: #3d3520; }
+    #shopPanelCloseBtn {
+      padding: 6px 12px;
+      border: 1px solid rgba(100, 80, 50, 0.35);
+      border-radius: 6px;
+      background: linear-gradient(180deg, #c4a86a, #a08050);
+      color: #2f2818;
+      font-family: 'Patrick Hand', cursive;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    #shopPanelCloseBtn:hover { background: linear-gradient(180deg, #d4b87a, #b09060); }
+    #shopPanel * { pointer-events: auto; }
+    #shopPanel .shopBtn { pointer-events: auto; cursor: pointer; }
+    #shopTabs {
+      display: flex;
+      border-bottom: 1px solid rgba(180, 160, 120, 0.5);
+      background: linear-gradient(180deg, rgba(220, 200, 160, 0.4), rgba(200, 180, 140, 0.25));
+    }
+    .shopTab {
+      flex: 1;
+      padding: 12px 10px;
+      border: none;
+      background: transparent;
+      font-family: 'Patrick Hand', cursive;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #3d3520;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+    .shopTab:hover { background: rgba(255,255,255,0.4); color: #2c2416; }
+    .shopTab.active {
+      background: rgba(255, 252, 242, 0.95);
+      color: #2c2416;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      border-radius: 8px 8px 0 0;
+    }
+    .shopTabContent.hidden { display: none; }
+    .shopTabContent { padding: 0; }
+    #shopDiaryContent {
+      max-height: 70vh;
+      overflow-y: auto;
+      font-family: 'Patrick Hand', cursive;
+    }
+    .diarySummaryInShop {
+      padding: 12px 14px;
+      font-size: 0.95rem;
+      color: #3d3520;
+      border-bottom: 1px dashed rgba(140, 120, 80, 0.4);
+      background: rgba(200, 180, 140, 0.15);
+    }
+    .diaryListInShop {
+      max-height: 320px;
+      overflow-y: auto;
+      font-size: 0.9rem;
+      padding: 8px 14px 12px;
+      background: repeating-linear-gradient(
+        transparent,
+        transparent 26px,
+        rgba(139, 115, 85, 0.06) 26px,
+        rgba(139, 115, 85, 0.06) 27px
+      );
+      line-height: 26px;
+    }
+    .diaryListInShop .diaryEntry {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 0 4px 2px 0;
+      color: #3d3520;
+      min-height: 26px;
+    }
+    .diaryListInShop .diaryEntry span:last-child { font-size: 0.82rem; color: #5c5040; }
+    .diaryListInShop .diaryEmpty { color: #7a6a52; padding: 8px 0; font-style: italic; }
+    .settingsRow {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+    }
+    .settingsLabel { font-size: 0.9rem; color: #3d3520; min-width: 52px; }
+    .settingsSlider { flex: 1; accent-color: #8b7355; height: 8px; cursor: pointer; }
+    .settingsValue { font-size: 0.88rem; color: #5c5040; min-width: 36px; }
+    .settingsRestartBtn {
+      display: block;
+      width: 100%;
+      padding: 10px 14px;
+      font-family: 'Patrick Hand', cursive;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #2f2818;
+      background: linear-gradient(180deg, #c4a86a, #a08050);
+      border: 1px solid rgba(100, 80, 50, 0.35);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .settingsRestartBtn:hover { background: linear-gradient(180deg, #d4b87a, #b09060); }
+    #shopHeader {
+      padding: 14px 16px;
+      font-family: 'Caveat', cursive;
+      font-weight: 600;
+      font-size: 1.2rem;
+      color: #3d3520;
+      border-bottom: 1px solid rgba(139, 115, 85, 0.35);
+      background: linear-gradient(180deg, rgba(255,255,255,0.25) 0%, transparent 100%);
+    }
+    #shopHeader::before { content: '🛒 '; }
+    .currentEquipment {
+      padding: 10px 14px;
+      background: rgba(200, 180, 140, 0.15);
+      border-bottom: 1px dashed rgba(139, 115, 85, 0.4);
+      font-size: 0.9rem;
+      color: #3d3520;
+    }
+    .currentEquipment strong { display: block; margin-bottom: 4px; color: #5c5040; font-family: 'Patrick Hand', cursive; font-size: 0.75rem; letter-spacing: 0.03em; }
+    .shopSection {
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(180, 160, 120, 0.25);
+    }
+    .shopSection:last-of-type { border-bottom: none; }
+    .shopSectionTitle {
+      font-family: 'Patrick Hand', cursive;
+      font-size: 0.8rem;
+      letter-spacing: 0.04em;
+      color: #5c5040;
+      margin-bottom: 8px;
+    }
+    .shopItem {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 10px;
+      margin-bottom: 6px;
+      background: rgba(255,255,255,0.6);
+      border-radius: 6px;
+      border: 1px solid rgba(180, 160, 120, 0.2);
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .shopItem:hover { background: rgba(255,255,255,0.9); }
+    .shopItem.equipped {
+      border-color: #6b8a4a;
+      background: rgba(107, 140, 70, 0.2);
+    }
+    .shopItem.locked { opacity: 0.75; }
+    .shopItemName { font-size: 0.9rem; flex: 1; min-width: 0; color: #3d3520; }
+    .shopItemTrickBlock { flex: 1; min-width: 0; }
+    .trickInstruction { font-size: 0.75rem; color: #5c5040; margin-top: 4px; font-style: italic; }
+    .shopItemPrice {
+      font-size: 0.88rem;
+      color: #3d3520;
+      font-weight: 600;
+    }
+    .shopItemPrice.owned { color: #4a7a3a; }
+    .shopItemPrice.insufficient { color: #a08080; }
+    .shopBtn {
+      padding: 6px 12px;
+      border: 1px solid rgba(100, 80, 50, 0.35);
+      border-radius: 6px;
+      font-family: 'Patrick Hand', cursive;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      background: linear-gradient(180deg, #c4a86a, #a08050);
+      color: #2f2818;
+      flex-shrink: 0;
+    }
+    .shopBtn:hover:not(:disabled) { background: linear-gradient(180deg, #d4b87a, #b09060); }
+    .shopBtn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      background: #b0a090;
+      color: #6a5a4a;
+      border-color: rgba(100, 80, 50, 0.2);
+    }
+    .shopBtn.equip { background: linear-gradient(180deg, #6b9a4a, #5a7a3a); color: #fff; border-color: rgba(0,0,0,0.15); }
+    .shopBtn.equip:hover:not(:disabled) { background: linear-gradient(180deg, #7aaa5a, #6a8a4a); }
+    #moneyDisplay {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      z-index: 1100;
+      padding: 12px 18px;
+      background: linear-gradient(180deg, #f6f1e3 0%, #ebe4d0 100%);
+      border: 1px solid #c9b896;
+      border-left: 4px solid #8b7355;
+      border-radius: 2px 10px 10px 2px;
+      box-shadow: 2px 2px 0 rgba(0,0,0,0.06), 4px 4px 12px rgba(0,0,0,0.12);
+      color: #2f2818;
+      font-family: 'Patrick Hand', cursive;
+      font-weight: 600;
+      font-size: 1.2rem;
+      pointer-events: none;
+      transition: transform 0.15s ease;
+    }
+    #moneyDisplay.bounce { animation: moneyBounce 0.5s ease; }
+    @keyframes moneyBounce {
+      0%, 100% { transform: scale(1); }
+      30% { transform: scale(1.15); }
+      60% { transform: scale(0.98); }
+    }
+    #hookedAlert {
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      padding: 20px 40px;
+      background: linear-gradient(180deg, #f6f1e3 0%, #ebe4d0 100%);
+      border: 2px solid #8b7355;
+      border-radius: 4px 12px 12px 4px;
+      box-shadow: 2px 2px 0 rgba(0,0,0,0.08), 6px 6px 20px rgba(0,0,0,0.2);
+      color: #2f2818;
+      font-family: 'Caveat', cursive;
+      font-size: 1.8rem;
+      font-weight: 600;
+      z-index: 2000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    #hookedAlert.show { opacity: 1; animation: pulse 0.5s ease; }
+    @keyframes pulse {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); }
+      50% { transform: translate(-50%, -50%) scale(1.05); }
+    }
+    #catchToast {
+      position: fixed;
+      left: 50%;
+      bottom: 120px;
+      transform: translateX(-50%);
+      padding: 12px 24px;
+      background: linear-gradient(180deg, #f6f1e3 0%, #ebe4d0 100%);
+      border: 1px solid #c9b896;
+      border-left: 4px solid #8b7355;
+      border-radius: 2px 10px 10px 2px;
+      box-shadow: 2px 2px 12px rgba(0,0,0,0.15);
+      color: #3d3520;
+      font-family: 'Patrick Hand', cursive;
+      font-weight: 600;
+      font-size: 1rem;
+      z-index: 1500;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    #catchToast.show { opacity: 1; }
+    #catchPop {
+      position: fixed;
+      left: 50%;
+      top: 45%;
+      transform: translate(-50%, -50%) scale(0.3);
+      padding: 16px 32px;
+      background: linear-gradient(180deg, #f6f1e3 0%, #ebe4d0 100%);
+      border: 2px solid #8b7355;
+      border-radius: 4px 12px 12px 4px;
+      box-shadow: 2px 2px 0 rgba(0,0,0,0.08), 8px 8px 24px rgba(0,0,0,0.25);
+      color: #2f2818;
+      font-family: 'Caveat', cursive;
+      font-weight: 600;
+      font-size: 1.4rem;
+      text-align: center;
+      z-index: 2500;
+      opacity: 0;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    #catchPop.show {
+      animation: catchPop 1.2s ease forwards;
+    }
+    @keyframes catchPop {
+      0% { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
+      15% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+      30% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+      85% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+      100% { opacity: 0; transform: translate(-50%, -50%) scale(1.1); }
+    }
+    #fellInOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 3000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s;
+    }
+    #fellInOverlay.show { opacity: 1; pointer-events: auto; }
+    #fellInOverlay .message {
+      color: #f6f1e3;
+      font-family: 'Caveat', cursive;
+      font-size: 2rem;
+      font-weight: 600;
+      text-align: center;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    }
+    #controlsHint {
+      position: fixed;
+      bottom: 12px;
+      left: 12px;
+      font-family: 'Patrick Hand', cursive;
+      font-size: 0.85rem;
+      color: rgba(246, 241, 227, 0.9);
+      z-index: 100;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+    }
+    #startMenuOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.42);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2500;
+      pointer-events: auto;
+    }
+    #startMenuOverlay.hidden { display: none; pointer-events: none; }
+    #startMenuBox {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      max-width: 90%;
+      text-align: center;
+    }
+    #startMenuTitle {
+      font-family: 'Caveat', cursive;
+      font-size: clamp(2.2rem, 6vw, 3.5rem);
+      font-weight: 600;
+      color: #f6f1e3;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+      margin-bottom: 12px;
+      animation: titleFloat 3s ease-in-out infinite;
+    }
+    @keyframes titleFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+    #startMenuTrophy {
+      font-family: 'Patrick Hand', cursive;
+      font-size: 0.9rem;
+      color: rgba(246, 241, 227, 0.95);
+      background: linear-gradient(180deg, rgba(80, 60, 30, 0.85), rgba(60, 45, 20, 0.9));
+      border: 2px solid #8b7355;
+      border-radius: 8px;
+      padding: 8px 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    #startMenuControls {
+      font-family: 'Patrick Hand', cursive;
+      font-size: 0.95rem;
+      color: rgba(246, 241, 227, 0.98);
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(180, 160, 120, 0.5);
+      border-radius: 8px;
+      padding: 14px 20px;
+      margin-bottom: 20px;
+      text-align: left;
+      line-height: 1.6;
+      max-width: 280px;
+    }
+    #startMenuControls strong { display: block; margin-bottom: 6px; color: #e8dcc8; }
+    #startMenuControls div { margin-bottom: 4px; }
+    #startMenuStartBtn {
+      font-family: 'Patrick Hand', cursive;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #2f2818;
+      background: linear-gradient(180deg, #c4a86a 0%, #8b6914 50%, #6b5010 100%);
+      border: 2px solid #5a4010;
+      border-radius: 8px;
+      padding: 14px 32px;
+      cursor: pointer;
+      box-shadow: 0 4px 0 #4a3810, 0 6px 16px rgba(0,0,0,0.4);
+      transition: transform 0.1s, box-shadow 0.1s;
+    }
+    #startMenuStartBtn:hover {
+      transform: translateY(1px);
+      box-shadow: 0 2px 0 #4a3810, 0 4px 12px rgba(0,0,0,0.35);
+    }
+    #startMenuStartBtn:active {
+      transform: translateY(3px);
+      box-shadow: 0 0 0 #4a3810, 0 2px 8px rgba(0,0,0,0.3);
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="900" height="500"></canvas>
+  <div id="startMenuOverlay">
+    <div id="startMenuBox">
+      <h1 id="startMenuTitle">Pier Pressure</h1>
+      <div id="startMenuTrophy">🏆 BIGGEST CATCH: —</div>
+      <div id="startMenuControls">
+        <strong>How to Play</strong>
+        <div><strong>SPACE</strong> = Cast / Reel</div>
+        <div style="margin-top:8px;font-size:0.9em;">Goal: Catch big fish, buy better gear, reach the deep!</div>
+      </div>
+      <button type="button" id="startMenuStartBtn">START ADVENTURE</button>
+    </div>
+  </div>
+  <div id="moneyDisplay"><span id="moneyIcon">💵</span> <span id="moneyAmount">$0</span></div>
+  <button type="button" id="shopMenuBtn" aria-label="Open shop and diary">🛒 Menu ▶</button>
+  <div id="shopPanel" class="shop-panel-hidden">
+    <div class="shopPanelCloseBar">
+      <span>Shop &amp; Diary</span>
+      <button type="button" id="shopPanelCloseBtn">Close ▼</button>
+    </div>
+    <div id="shopTabs">
+      <button type="button" class="shopTab active" data-tab="shop">🛒 Shop</button>
+      <button type="button" class="shopTab" data-tab="diary">📓 Fish Diary</button>
+      <button type="button" class="shopTab" data-tab="settings">⚙️ Settings</button>
+    </div>
+    <div id="shopContent" class="shopTabContent">
+      <div class="currentEquipment">
+        <strong>Current Rod</strong>
+        <span id="currentRodLabel">Basic Stick</span>
+      </div>
+      <div class="currentEquipment">
+        <strong>Bait Equipped</strong>
+        <span id="currentBaitLabel">Bread</span>
+      </div>
+      <div class="shopSection">
+        <div class="shopSectionTitle">Rods</div>
+        <div id="rodsList"></div>
+      </div>
+      <div class="shopSection">
+        <div class="shopSectionTitle">Bait</div>
+        <div id="baitsList"></div>
+      </div>
+      <div class="shopSection">
+        <div class="shopSectionTitle">Trick Moves</div>
+        <div id="tricksList"></div>
+      </div>
+      <div class="shopSection">
+        <div class="shopSectionTitle">Transportation</div>
+        <div class="currentEquipment" style="margin-bottom:8px;">
+          <strong>Current</strong>
+          <span id="currentVehicleLabel">Pier</span>
+        </div>
+        <div id="vehiclesList"></div>
+      </div>
+    </div>
+    <div id="shopDiaryContent" class="shopTabContent hidden">
+      <div id="fishDiarySummary" class="diarySummaryInShop">Best single: $0 · Total earned: $0</div>
+      <div id="fishDiaryList" class="diaryListInShop"></div>
+    </div>
+    <div id="shopSettingsContent" class="shopTabContent hidden">
+      <div class="shopSection">
+        <div class="shopSectionTitle">Sound</div>
+        <div class="settingsRow">
+          <label for="soundVolume" class="settingsLabel">Volume</label>
+          <input type="range" id="soundVolume" min="0" max="100" value="70" class="settingsSlider" />
+          <span id="soundVolumeValue" class="settingsValue">70%</span>
+        </div>
+      </div>
+      <div class="shopSection">
+        <div class="shopSectionTitle">Game</div>
+        <button type="button" id="restartBtnInSettings" class="settingsRestartBtn">🔄 Restart game</button>
+      </div>
+    </div>
+  </div>
+  <div id="hookedAlert">🎣 FISH ON!</div>
+  <div id="catchToast"></div>
+  <div id="catchPop"></div>
+  <div id="fellInOverlay"><div class="message">💦 FELL IN!<br><span style="font-size:0.6em;font-weight:400;">Click to continue</span></div></div>
+  <div id="controlsHint">Space: Cast/Reel</div>
+
+  <script>
+(function() {
+  'use strict';
+
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  let CW = canvas.width;
+  let CH = canvas.height;
+  let WATER_Y = CH * 0.5;
+  let PIER_Y = WATER_Y - 14;
+  const PIER_THICKNESS = 22;
+  let pierW = 160;
+
+  function resizeCanvas() {
+    CW = window.innerWidth;
+    CH = window.innerHeight;
+    canvas.width = CW;
+    canvas.height = CH;
+    WATER_Y = CH * 0.5;
+    PIER_Y = WATER_Y - 14;
+    pierW = Math.min(CW * 0.22, 160);
+  }
+
+  // Particles (splash, etc.)
+  const particles = [];
+  const floatingTexts = [];
+  const menuJumpingFish = [];
+  let menuTeaseUntil = 0;
+  let menuTeaseType = null;
+  let menuTeaseX = 0;
+  let menuNextJumpAt = 0;
+  let menuNextTeaseAt = 0;
+  let menuIdleLean = 0;
+  let menuIdlePhase = 0;
+
+  // ─── Sound (fishing-style, Web Audio) ─────────────────────────────────
+  let audioCtx = null;
+  function getAudioCtx() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+  }
+  function soundCast() {
+    const vol = state.soundVolume || 0;
+    if (vol <= 0) return;
+    try {
+      const ctx = getAudioCtx();
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(120, now);
+      osc.frequency.exponentialRampToValueAtTime(60, now + 0.08);
+      gain.gain.setValueAtTime(vol * 0.25, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+      osc.start(now);
+      osc.stop(now + 0.12);
+    } catch (_) {}
+  }
+  function soundBite() {
+    const vol = state.soundVolume || 0;
+    if (vol <= 0) return;
+    try {
+      const ctx = getAudioCtx();
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(280, now);
+      osc.frequency.setValueAtTime(380, now + 0.06);
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(vol * 0.3, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      osc.start(now);
+      osc.stop(now + 0.15);
+    } catch (_) {}
+  }
+  function soundCatch() {
+    const vol = state.soundVolume || 0;
+    if (vol <= 0) return;
+    try {
+      const ctx = getAudioCtx();
+      const now = ctx.currentTime;
+      for (let i = 0; i < 2; i++) {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime([392, 523][i], now + i * 0.1);
+        gain.gain.setValueAtTime(0, now + i * 0.1);
+        gain.gain.linearRampToValueAtTime(vol * 0.25, now + i * 0.1 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.2);
+        osc.start(now + i * 0.1);
+        osc.stop(now + i * 0.1 + 0.2);
+      }
+    } catch (_) {}
+  }
+
+  let musicGainNode = null;
+  let musicSourceNode = null;
+  let musicStarted = false;
+  let musicTenseActive = false;
+  function createMusicBuffer(ctx) {
+    const sampleRate = ctx.sampleRate;
+    const duration = 16;
+    const buffer = ctx.createBuffer(2, duration * sampleRate, sampleRate);
+    const L = buffer.getChannelData(0);
+    const R = buffer.getChannelData(1);
+    const chordSec = 4;
+    const chords = [
+      [261.63, 329.63, 392, 523.25],
+      [293.66, 369.99, 440, 587.33],
+      [220, 261.63, 329.63, 440],
+      [174.61, 220, 261.63, 349.23]
+    ];
+    for (let c = 0; c < 4; c++) {
+      const start = c * chordSec * sampleRate;
+      const end = (c + 1) * chordSec * sampleRate;
+      for (let i = start; i < end && i < L.length; i++) {
+        const t = (i - start) / sampleRate;
+        const fadeIn = 1 - Math.exp(-t * 1.2);
+        const fadeOut = 1 - Math.exp(-(chordSec - t) * 0.8);
+        const env = 0.12 * fadeIn * fadeOut;
+        let s = 0;
+        for (let k = 0; k < chords[c].length; k++) {
+          const f = chords[c][k];
+          s += Math.sin(2 * Math.PI * f * i / sampleRate) * (1 + 0.25 * Math.sin(2 * Math.PI * 0.2 * i / sampleRate));
+        }
+        s = s / 4 * env;
+        L[i] = s * 0.95;
+        R[i] = s * 1.05;
+      }
+    }
+    return buffer;
+  }
+  function startMusic() {
+    if (musicStarted) return;
+    try {
+      const ctx = getAudioCtx();
+      const buf = createMusicBuffer(ctx);
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.loop = true;
+      const gain = ctx.createGain();
+      gain.gain.value = (state.soundVolume != null ? state.soundVolume : 0.7) * 0.22;
+      src.connect(gain);
+      gain.connect(ctx.destination);
+      src.start(0);
+      musicSourceNode = src;
+      musicGainNode = gain;
+      musicStarted = true;
+    } catch (_) {}
+  }
+  function setMusicVolume() {
+    const vol = state.soundVolume != null ? state.soundVolume : 0.7;
+    if (musicGainNode) {
+      const ctx = audioCtx || (typeof getAudioCtx === 'function' && getAudioCtx());
+      if (ctx) {
+        const baseGain = musicTenseActive ? vol * 0.28 : vol * 0.22;
+        musicGainNode.gain.setValueAtTime(baseGain, ctx.currentTime);
+      }
+    }
+  }
+  function updateMusicTension() {
+    if (!musicSourceNode || !musicGainNode || !audioCtx) return;
+    const tense = !!(state.fishOn && state.reelSpeed > 0 && state.currentFish && state.currentFish.weight >= HEAVY_FISH_KG);
+    if (tense === musicTenseActive) return;
+    musicTenseActive = tense;
+    const now = audioCtx.currentTime;
+    const vol = state.soundVolume != null ? state.soundVolume : 0.7;
+    if (tense) {
+      musicSourceNode.playbackRate.setTargetAtTime(1.52, now, 0.08);
+      musicGainNode.gain.setTargetAtTime(vol * 0.28, now, 0.08);
+    } else {
+      musicSourceNode.playbackRate.setTargetAtTime(1, now, 0.12);
+      musicGainNode.gain.setTargetAtTime(vol * 0.22, now, 0.12);
+    }
+  }
+
+  // ─── Game State ─────────────────────────────────────────────────────
+  const state = {
+    money: 0,
+    rodIndex: 0,
+    baitIndex: 0,
+    ownedRods: [true, false, false, false],
+    ownedBaits: [true, false, false, false],
+    tricks: { powerJig: false, deepSink: false },
+    lineCast: false,
+    lineLength: 0,
+    lineTargetLength: 0,
+    hookY: 0,
+    fishOn: false,
+    currentFish: null,
+    reelSpeed: 0,
+    trickActive: null,
+    hookDepth: 0,
+    lastCastTime: 0,
+    lastHookY: 0,
+    splashCooldown: 0,
+    spookCooldown: 0,
+    lineSettledTime: 0,
+    fishOnTime: 0,
+    tension: 0.5,
+    fishermanOffsetX: 0,
+    vehicleIndex: 0,
+    ownedVehicles: [true, false, false, false],
+    fellIn: false,
+    fishDiary: { byName: {}, bestSingleCatch: 0, totalEarned: 0, bestCatchFish: null },
+    soundVolume: 0.7,
+    menuActive: true,
+    keysHeld: { shift: false, a: false, s: false }
+  };
+
+  const BITE_RATE_BASE = 0.032;
+  const MIN_SETTLE_BEFORE_BITE = 0.6;
+  const MAX_WAIT_BEFORE_BITE = 5;
+  const SPOOK_DURATION = 6;
+  const TENSION_DRIFT_UP = 0.28;
+  const TENSION_TAP_DOWN = 0.22;
+  const TENSION_GREEN_LO = 0.28;
+  const TENSION_GREEN_HI = 0.72;
+  const PULL_PER_KG = 2.8;
+  const RECOVER_PER_SEC = 12;
+  const FELL_IN_EDGE = 58;
+  const HEAVY_FISH_KG = 4;
+  const TRAWLER_TENSION_WEIGHT_SCALE = 55;
+  const TRAWLER_PULL_MULT = 1.28;
+  const TRAWLER_REEL_MULT = 0.62;
+
+  const RODS = [
+    { name: 'Basic Stick', price: 0, maxWeight: 1.2, rodTier: 0, emoji: '🪵', color: '#6b5344', length: 0.85, style: 'stick' },
+    { name: 'Fiberglass Rod', price: 10, maxWeight: 4, rodTier: 1, emoji: '🎣', color: '#4a7a9a', length: 1, style: 'fiberglass' },
+    { name: 'Carbon Fiber', price: 1000, maxWeight: 10, rodTier: 2, emoji: '🎣', color: '#2a2a2a', length: 1.15, style: 'carbon' },
+    { name: 'Pro Reel', price: 5000, maxWeight: 22, rodTier: 3, emoji: '⚙️', color: '#8b6914', length: 1.3, style: 'pro' }
+  ];
+
+  const BAITS = [
+    { name: 'Bread', price: 0, tier: 0, emoji: '🍞' },
+    { name: 'Bacon', price: 50, tier: 1, emoji: '🥓' },
+    { name: 'Sardines', price: 800, tier: 2, emoji: '🐟' },
+    { name: 'Whole Squid', price: 5000, tier: 3, emoji: '🦑' }
+  ];
+
+  const TRICKS = [
+    { id: 'powerJig', name: 'Power Jig', price: 75, key: 'A' },
+    { id: 'deepSink', name: 'Deep Sink', price: 120, key: 'S' }
+  ];
+
+  const FISH_TYPES = [
+    { emoji: '🐟', name: 'Minnow', baseValue: 2, weightRange: [0.15, 0.6], tier: 0 },
+    { emoji: '🐠', name: 'Perch', baseValue: 4, weightRange: [0.3, 1.2], tier: 0 },
+    { emoji: '🐡', name: 'Bass', baseValue: 25, weightRange: [0.8, 3], tier: 1 },
+    { emoji: '🐟', name: 'Trout', baseValue: 45, weightRange: [1, 4], tier: 1 },
+    { emoji: '🐠', name: 'Salmon', baseValue: 240, weightRange: [2.5, 9], tier: 2 },
+    { emoji: '🐡', name: 'Tuna', baseValue: 340, weightRange: [4, 14], tier: 2 },
+    { emoji: '🦈', name: 'Great White Shark', baseValue: 7500, weightRange: [20, 30], tier: -1, rare: true },
+    { emoji: '🦑', name: 'Giant Squid', baseValue: 8500, weightRange: [18, 28], tier: -1, rare: true }
+  ];
+
+  const BOSS_FISH_TYPES = [
+    { emoji: '🐋', name: 'Megawhale', baseValue: 25000, weightRange: [80, 120], boss: true },
+    { emoji: '🦈', name: 'Kraken', baseValue: 35000, weightRange: [100, 150], boss: true }
+  ];
+
+  const TRAWLER_FISH_TYPES = [
+    { emoji: '🐟', name: 'Swordfish', baseValue: 720, weightRange: [60, 180], trawler: true },
+    { emoji: '🐠', name: 'Blue Marlin', baseValue: 880, weightRange: [80, 220], trawler: true },
+    { emoji: '🐡', name: 'Sailfish', baseValue: 650, weightRange: [45, 130], trawler: true },
+    { emoji: '🐟', name: 'Bluefin Tuna', baseValue: 620, weightRange: [50, 140], trawler: true },
+    { emoji: '🐠', name: 'Yellowfin Tuna', baseValue: 480, weightRange: [35, 100], trawler: true },
+    { emoji: '🐡', name: 'Mahi-Mahi', baseValue: 420, weightRange: [12, 35], trawler: true },
+    { emoji: '🐟', name: 'Giant Grouper', baseValue: 520, weightRange: [40, 110], trawler: true },
+    { emoji: '🐠', name: 'Wahoo', baseValue: 400, weightRange: [25, 65], trawler: true },
+    { emoji: '🐡', name: 'Opah', baseValue: 580, weightRange: [30, 90], trawler: true },
+    { emoji: '🐟', name: 'Bigeye Tuna', baseValue: 560, weightRange: [40, 120], trawler: true },
+    { emoji: '🐠', name: 'Amberjack', baseValue: 380, weightRange: [20, 55], trawler: true },
+    { emoji: '🐡', name: 'Cobia', baseValue: 440, weightRange: [25, 70], trawler: true }
+  ];
+
+  const ALIEN_FISH_TYPES = [
+    { emoji: '👽', name: 'Xenofin', baseValue: 120000, weightRange: [5, 15], alien: true },
+    { emoji: '🛸', name: 'Void Eel', baseValue: 180000, weightRange: [8, 20], alien: true },
+    { emoji: '⭐', name: 'Nebula Fish', baseValue: 250000, weightRange: [10, 25], alien: true }
+  ];
+
+  const RARE_CHANCE = 0;
+  const RARE_CHANCE_SURFBOARD = 0;
+  const RARE_CHANCE_TRAWLER = 0.14;
+  const BOSS_CHANCE = 0.08;
+  const TRAWLER_PREMIUM_CHANCE = 0.58;
+  const ALIEN_CHANCE = 0.12;
+
+  const VEHICLES = [
+    { id: 'pier', name: 'Pier', price: 0, emoji: '🪵' },
+    { id: 'surfboard', name: 'Surfboard', price: 2000, emoji: '🏄' },
+    { id: 'trawler', name: 'Trawler', price: 50000, emoji: '🚢' },
+    { id: 'ufo', name: 'UFO', price: 1000000, emoji: '🛸' }
+  ];
+
+  function getPlatform() {
+    const v = VEHICLES[state.vehicleIndex];
+    const id = v ? v.id : 'pier';
+    if (id === 'surfboard') {
+      const boardX = pierW + 55;
+      const boardW = 88;
+      return { baseX: boardX - 29, platformY: WATER_Y - 60, id, boardX, boardW, fellInEdge: 42 };
+    }
+    if (id === 'trawler') {
+      const deckY = WATER_Y - 20;
+      const boatCenter = CW * 0.48;
+      return { baseX: boatCenter - 29, platformY: deckY - 50, id, deckY, boatCenter, fellInEdge: 155 };
+    }
+    if (id === 'ufo') {
+      const deckY = 90;
+      return { baseX: CW * 0.18, platformY: deckY - 50, id, deckY, fellInEdge: 52 };
+    }
+    return { baseX: pierW - 58, platformY: PIER_Y - 50, id: 'pier', fellInEdge: 58 };
+  }
+
+  // ─── Save / Load ────────────────────────────────────────────────────
+  function save() {
+    localStorage.setItem('pierFishing', JSON.stringify({
+      money: state.money,
+      rodIndex: state.rodIndex,
+      baitIndex: state.baitIndex,
+      ownedRods: state.ownedRods,
+      ownedBaits: state.ownedBaits,
+      tricks: state.tricks,
+      vehicleIndex: state.vehicleIndex,
+      ownedVehicles: state.ownedVehicles,
+      fishDiary: state.fishDiary,
+      soundVolume: state.soundVolume
+    }));
+  }
+
+  function recordFishCatch(fish) {
+    const d = state.fishDiary;
+    const name = fish.type.name;
+    if (!d.byName[name]) d.byName[name] = { count: 0, bestValue: 0 };
+    d.byName[name].count++;
+    d.byName[name].bestValue = Math.max(d.byName[name].bestValue, fish.value);
+    const prevBest = d.bestSingleCatch || 0;
+    d.bestSingleCatch = Math.max(prevBest, fish.value);
+    if (fish.value >= prevBest) d.bestCatchFish = { name: fish.type.name, weight: fish.weight, value: fish.value };
+    d.totalEarned = (d.totalEarned || 0) + fish.value;
+  }
+
+  function load() {
+    try {
+      const data = JSON.parse(localStorage.getItem('pierFishing'));
+      if (data) {
+        state.money = data.money ?? 0;
+        state.rodIndex = Math.min(data.rodIndex ?? 0, RODS.length - 1);
+        state.baitIndex = Math.min(data.baitIndex ?? 0, BAITS.length - 1);
+        state.ownedRods = data.ownedRods ?? state.ownedRods;
+        state.ownedBaits = data.ownedBaits ?? state.ownedBaits;
+        state.tricks = { ...state.tricks, ...(data.tricks || {}) };
+        state.vehicleIndex = Math.min(data.vehicleIndex ?? 0, VEHICLES.length - 1);
+        state.ownedVehicles = data.ownedVehicles ?? state.ownedVehicles;
+        if (data.fishDiary) {
+          state.fishDiary = { ...state.fishDiary, ...data.fishDiary };
+          if (!state.fishDiary.bestCatchFish) state.fishDiary.bestCatchFish = null;
+        }
+        if (data.soundVolume != null) state.soundVolume = Math.max(0, Math.min(1, data.soundVolume));
+      }
+    } catch (_) {}
+  }
+
+  function resetGame() {
+    state.money = 0;
+    state.rodIndex = 0;
+    state.baitIndex = 0;
+    state.ownedRods = [true, false, false, false];
+    state.ownedBaits = [true, false, false, false];
+    state.tricks = { powerJig: false, deepSink: false };
+    state.vehicleIndex = 0;
+    state.ownedVehicles = [true, false, false, false];
+    state.lineCast = false;
+    state.lineLength = 0;
+    state.reelSpeed = 0;
+    state.fishOn = false;
+    state.currentFish = null;
+    state.tension = 0.5;
+    state.fishermanOffsetX = 0;
+    state.fellIn = false;
+    state.spookCooldown = 0;
+    state.lineSettledTime = 0;
+    state.trickActive = null;
+    state.fishDiary = { byName: {}, bestSingleCatch: 0, totalEarned: 0, bestCatchFish: null };
+    if (state.soundVolume == null) state.soundVolume = 0.7;
+    localStorage.removeItem('pierFishing');
+    document.getElementById('fellInOverlay').classList.remove('show');
+    document.getElementById('hookedAlert').classList.remove('show');
+    document.getElementById('catchToast').classList.remove('show');
+    document.getElementById('catchPop').classList.remove('show');
+    renderShop();
+    updateMoneyUI();
+  }
+
+  function getFishPool() {
+    const v = VEHICLES[state.vehicleIndex];
+    if (v && v.id === 'trawler') {
+      if (Math.random() < BOSS_CHANCE) return { pool: BOSS_FISH_TYPES, isBoss: true };
+      if (Math.random() < TRAWLER_PREMIUM_CHANCE) return { pool: TRAWLER_FISH_TYPES, isTrawler: true };
+    }
+    if (v && v.id === 'ufo') return { pool: ALIEN_FISH_TYPES, isAlien: true };
+    return { pool: FISH_TYPES.filter(f => !f.boss && !f.alien && !f.trawler), isBoss: false, isAlien: false, isTrawler: false };
+  }
+
+  function getRareChance() {
+    const v = VEHICLES[state.vehicleIndex];
+    if (!v) return RARE_CHANCE;
+    if (v.id === 'surfboard') return RARE_CHANCE_SURFBOARD;
+    if (v.id === 'trawler') return RARE_CHANCE_TRAWLER;
+    return RARE_CHANCE;
+  }
+
+  function getTrawlerTensionMult() {
+    const v = VEHICLES[state.vehicleIndex];
+    if (!v || v.id !== 'trawler' || !state.currentFish) return 1;
+    const w = state.currentFish.weight;
+    return Math.max(1, Math.min(1.92, 1 + (w - TRAWLER_TENSION_WEIGHT_SCALE) / TRAWLER_TENSION_WEIGHT_SCALE));
+  }
+
+  function spawnFish() {
+    const rod = RODS[state.rodIndex];
+    const bait = BAITS[state.baitIndex];
+    const v = VEHICLES[state.vehicleIndex];
+    const { pool, isBoss, isAlien, isTrawler } = getFishPool();
+
+    if (isBoss || isAlien) {
+      const type = pool[Math.floor(Math.random() * pool.length)];
+      const w = type.weightRange[0] + Math.random() * (type.weightRange[1] - type.weightRange[0]);
+      const value = Math.round(type.baseValue * (0.85 + Math.random() * 0.3));
+      return { type, weight: w, value, trickFish: false };
+    }
+
+    if (isTrawler) {
+      const type = pool[Math.floor(Math.random() * pool.length)];
+      const maxW = Math.min(type.weightRange[1], rod.maxWeight);
+      const minW = Math.max(type.weightRange[0], maxW * 0.4);
+      const sizeBias = 0.55;
+      const weight = minW + (maxW - minW) * (sizeBias + (1 - sizeBias) * Math.random());
+      const sizeMult = weight / ((type.weightRange[0] + type.weightRange[1]) / 2);
+      const qualityMult = 1.2 + Math.random() * 0.25;
+      const value = Math.round(type.baseValue * sizeMult * (1.1 + Math.random() * 0.3) * qualityMult);
+      return { type, weight, value, trickFish: false };
+    }
+
+    const rareChance = getRareChance();
+    const canCatchRare = v && v.id === 'trawler' && rod.rodTier >= 2 && bait.tier >= 2;
+    let roll = Math.random();
+    if (roll < rareChance && canCatchRare) {
+      const rare = FISH_TYPES.filter(f => f.rare);
+      const type = rare[Math.floor(Math.random() * rare.length)];
+      const w = type.weightRange[0] + Math.random() * (type.weightRange[1] - type.weightRange[0]);
+      const value = Math.round(type.baseValue * (0.8 + Math.random() * 0.4));
+      return { type, weight: w, value, trickFish: false };
+    }
+
+    const offshoreBonus = (v && v.id === 'surfboard') ? 0.25 : (v && v.id === 'trawler') ? 0.5 : 0;
+    const tierBonus = bait.tier * 0.12 + offshoreBonus;
+    const trickBonus = state.trickActive ? 0.2 : 0;
+    roll = Math.random() * (1 + tierBonus + trickBonus);
+    let typePool = FISH_TYPES.filter(f => !f.rare && !f.trawler && f.tier <= bait.tier && f.tier <= rod.rodTier);
+    if (typePool.length === 0) typePool = FISH_TYPES.filter(f => !f.rare && !f.trawler && f.tier === 0);
+    // When tier 2+ rod and bait, bias toward Salmon and Tuna to speed the grind to trawler
+    const tier2Bias = (rod.rodTier >= 2 && bait.tier >= 2 && typePool.length > 2) ? 0.58 : 0;
+    const biasedRoll = Math.min(1, roll + tier2Bias * (1 - roll));
+    const type = typePool[Math.min(Math.floor(biasedRoll * typePool.length), typePool.length - 1)];
+
+    const maxW = rod.maxWeight;
+    const minW = type.weightRange[0];
+    let maxWType = Math.min(type.weightRange[1], maxW);
+    const sizeBias = (v && v.id === 'surfboard') ? 0.38 : (v && v.id === 'trawler') ? 0.72 : 0;
+    const weight = minW + (maxWType - minW) * (sizeBias + (1 - sizeBias) * Math.random());
+    const sizeMult = weight / ((type.weightRange[0] + type.weightRange[1]) / 2);
+    const qualityMult = (v && v.id === 'surfboard') ? (1.08 + Math.random() * 0.14) : (v && v.id === 'trawler') ? (1.22 + Math.random() * 0.22) : 1;
+    let value = Math.round(type.baseValue * sizeMult * (0.9 + Math.random() * 0.2) * qualityMult);
+    if (type.tier === 0 && value > 0 && Math.random() < 0.08) value = Math.min(10, Math.round(value * (1.8 + Math.random() * 0.5)));
+    const trickFish = state.trickActive && Math.random() < 0.35;
+    return { type, weight, value: trickFish ? Math.round(value * 1.5) : value, trickFish };
+  }
+
+  function addSplash(x, y, count) {
+    for (let i = 0; i < count; i++) {
+      const angle = Math.PI * 0.3 + Math.random() * Math.PI * 0.5;
+      const speed = 2 + Math.random() * 5;
+      particles.push({
+        x, y,
+        vx: Math.cos(angle) * (Math.random() > 0.5 ? 1 : -1) * speed,
+        vy: -speed * (0.4 + Math.random() * 0.6),
+        life: 1,
+        size: 2 + Math.random() * 4
+      });
+    }
+  }
+
+  function addFloatingText(x, y, text) {
+    floatingTexts.push({ x, y, text, life: 1, vy: -45 });
+  }
+
+  // ─── Cast / Reel ────────────────────────────────────────────────────
+  function cast() {
+    if (state.lineCast || state.fellIn) return;
+    state.lineCast = true;
+    state.lineLength = 0;
+    state.lastHookY = 0;
+    state.splashCooldown = 0;
+    state.lineSettledTime = 0;
+    state.tension = 0.5;
+    state.fishermanOffsetX = 0;
+    state.lineTargetLength = 80 + Math.random() * 120;
+    state.hookDepth = state.tricks.deepSink && state.trickActive === 'deepSink' ? 1.4 : 1;
+    state.lastCastTime = Date.now();
+    soundCast();
+  }
+
+  function reel() {
+    if (!state.lineCast) return;
+    state.reelSpeed = 4;
+    if (state.fishOn) {
+      const mult = getTrawlerTensionMult();
+      state.tension = Math.max(0, state.tension - TENSION_TAP_DOWN / mult);
+    }
+  }
+
+  function getHookY() {
+    const progress = Math.min(1, state.lineLength / state.lineTargetLength);
+    return WATER_Y + (CH - WATER_Y) * 0.7 * progress * state.hookDepth;
+  }
+
+  function tryBite() {
+    if (state.fishOn || !state.lineCast) return;
+    const now = Date.now() / 1000;
+    if (state.lineLength >= state.lineTargetLength * 0.98) {
+      if (!state.lineSettledTime) state.lineSettledTime = now;
+    } else {
+      state.lineSettledTime = 0;
+    }
+    const settled = state.lineSettledTime ? now - state.lineSettledTime : 0;
+    if (settled < MIN_SETTLE_BEFORE_BITE) return;
+    const bait = BAITS[state.baitIndex];
+    let rate = (0.5 + bait.tier * 0.25) * BITE_RATE_BASE;
+    if (state.trickActive) rate *= 1.35;
+    if (state.spookCooldown > 0) rate *= 0.35;
+    if (settled >= MAX_WAIT_BEFORE_BITE) rate = 1;
+    if (Math.random() < rate) {
+      state.currentFish = spawnFish();
+      state.fishOn = true;
+      soundBite();
+      state.fishOnTime = now;
+      document.getElementById('hookedAlert').classList.add('show');
+      setTimeout(() => document.getElementById('hookedAlert').classList.remove('show'), 800);
+    }
+  }
+
+  // ─── Shop UI (event delegation so buttons work after innerHTML) ───────
+  function renderShop() {
+    const rodsList = document.getElementById('rodsList');
+    const baitsList = document.getElementById('baitsList');
+    const tricksList = document.getElementById('tricksList');
+
+    document.getElementById('currentRodLabel').textContent = RODS[state.rodIndex].name;
+    document.getElementById('currentBaitLabel').textContent = BAITS[state.baitIndex].name;
+    const currentV = document.getElementById('currentVehicleLabel');
+    if (currentV) currentV.textContent = VEHICLES[state.vehicleIndex].name;
+    const vehiclesList = document.getElementById('vehiclesList');
+    if (vehiclesList) {
+      vehiclesList.innerHTML = VEHICLES.map((v, i) => {
+        const owned = state.ownedVehicles[i];
+        const equipped = state.vehicleIndex === i;
+        const insufficient = !owned && state.money < v.price;
+        const btnText = equipped ? 'Equipped' : owned ? 'Equip' : 'Buy';
+        const disabled = equipped || (!owned && insufficient);
+        return `<div class="shopItem ${equipped ? 'equipped' : ''} ${!owned ? 'locked' : ''}">
+          <span class="shopItemName">${v.emoji} ${v.name}</span>
+          <span class="shopItemPrice ${owned ? 'owned' : ''} ${insufficient ? 'insufficient' : ''}">${v.price === 0 ? 'Free' : '$' + v.price.toLocaleString()}</span>
+          <button class="shopBtn ${equipped ? 'equip' : ''}" data-action="vehicle" data-index="${i}" ${disabled ? 'disabled' : ''}>${btnText}</button>
+        </div>`;
+      }).join('');
+    }
+    const hint = document.getElementById('controlsHint');
+    hint.textContent = state.tricks.powerJig || state.tricks.deepSink
+      ? 'Space: Cast/Reel · Hold Shift+A or Shift+S whilst casting for tricks'
+      : 'Space: Cast/Reel';
+
+    rodsList.innerHTML = RODS.map((r, i) => {
+      const owned = state.ownedRods[i];
+      const equipped = state.rodIndex === i;
+      const insufficient = !owned && state.money < r.price;
+      const btnText = equipped ? 'Equipped' : owned ? 'Equip' : 'Buy';
+      const disabled = equipped || (!owned && insufficient);
+      return `<div class="shopItem ${equipped ? 'equipped' : ''} ${!owned ? 'locked' : ''}" data-rod="${i}">
+        <span class="shopItemName">${r.emoji} ${r.name}</span>
+        <span class="shopItemPrice ${owned ? 'owned' : ''} ${insufficient && !owned ? 'insufficient' : ''}">${r.price === 0 ? 'Free' : '$' + r.price.toLocaleString()}</span>
+        <button class="shopBtn ${equipped ? 'equip' : ''}" data-action="rod" data-index="${i}" ${disabled ? 'disabled' : ''}>${btnText}</button>
+      </div>`;
+    }).join('');
+
+    baitsList.innerHTML = BAITS.map((b, i) => {
+      const owned = state.ownedBaits[i];
+      const equipped = state.baitIndex === i;
+      const insufficient = !owned && state.money < b.price;
+      const btnText = equipped ? 'Equipped' : owned ? 'Equip' : 'Buy';
+      const disabled = equipped || (!owned && insufficient);
+      return `<div class="shopItem ${equipped ? 'equipped' : ''} ${!owned ? 'locked' : ''}">
+        <span class="shopItemName">${b.emoji} ${b.name}</span>
+        <span class="shopItemPrice ${owned ? 'owned' : ''} ${insufficient && !owned ? 'insufficient' : ''}">${b.price === 0 ? 'Free' : '$' + b.price.toLocaleString()}</span>
+        <button class="shopBtn ${equipped ? 'equip' : ''}" data-action="bait" data-index="${i}" ${disabled ? 'disabled' : ''}>${btnText}</button>
+      </div>`;
+    }).join('');
+
+    tricksList.innerHTML = TRICKS.map(t => {
+      const owned = state.tricks[t.id];
+      const insufficient = !owned && state.money < t.price;
+      const instruction = owned ? `<div class="trickInstruction">Hold Shift + ${t.key} whilst casting to use</div>` : '';
+      return `<div class="shopItem ${owned ? 'equipped' : ''}">
+        <div class="shopItemTrickBlock">
+          <span class="shopItemName">${t.name} [${t.key}]</span>
+          ${instruction}
+        </div>
+        <span class="shopItemPrice ${owned ? 'owned' : ''} ${insufficient ? 'insufficient' : ''}">${owned ? 'Owned' : '$' + t.price}</span>
+        <button class="shopBtn ${owned ? 'equip' : ''}" data-action="trick" data-id="${t.id}" data-price="${t.price}" ${owned ? 'disabled' : insufficient ? 'disabled' : ''}>${owned ? 'Owned' : 'Buy'}</button>
+      </div>`;
+    }).join('');
+    renderFishDiary();
+  }
+
+  function renderFishDiary() {
+    const summary = document.getElementById('fishDiarySummary');
+    const list = document.getElementById('fishDiaryList');
+    if (!summary || !list) return;
+    const d = state.fishDiary;
+    const best = d.bestSingleCatch || 0;
+    const total = d.totalEarned || 0;
+    summary.textContent = 'Best single: $' + best.toLocaleString() + ' · Total earned: $' + total.toLocaleString();
+    const entries = Object.entries(d.byName || {}).map(([name, o]) => ({ name, ...o })).sort((a, b) => (b.bestValue || 0) - (a.bestValue || 0));
+    if (entries.length === 0) {
+      list.innerHTML = '<div class="diaryEmpty">No fish caught yet.</div>';
+      return;
+    }
+    list.innerHTML = entries.map(e => {
+      const emoji = (FISH_TYPES.find(f => f.name === e.name) || BOSS_FISH_TYPES.find(f => f.name === e.name) || TRAWLER_FISH_TYPES.find(f => f.name === e.name) || ALIEN_FISH_TYPES.find(f => f.name === e.name))?.emoji || '🐟';
+      return '<div class="diaryEntry"><span>' + emoji + ' ' + e.name + '</span><span>' + e.count + ' caught · best $' + (e.bestValue || 0).toLocaleString() + '</span></div>';
+    }).join('');
+  }
+
+  function handleShopClick(e) {
+    e.stopPropagation();
+    const btn = (e.target && e.target.closest) ? e.target.closest('button[data-action]') : null;
+    if (!btn || btn.disabled) return;
+    e.preventDefault();
+    const action = btn.getAttribute('data-action');
+    if (!action) return;
+    if (action === 'rod') {
+      const i = parseInt(btn.dataset.index, 10);
+      const owned = state.ownedRods[i];
+      if (!owned && state.money < RODS[i].price) return;
+      if (!owned) {
+        state.money -= RODS[i].price;
+        state.ownedRods[i] = true;
+      }
+      state.rodIndex = i;
+    } else if (action === 'bait') {
+      const i = parseInt(btn.dataset.index, 10);
+      const owned = state.ownedBaits[i];
+      if (!owned && state.money < BAITS[i].price) return;
+      if (!owned) {
+        state.money -= BAITS[i].price;
+        state.ownedBaits[i] = true;
+      }
+      state.baitIndex = i;
+    } else if (action === 'trick') {
+      const id = btn.dataset.id;
+      const price = parseInt(btn.dataset.price, 10);
+      if (state.money >= price && !state.tricks[id]) {
+        state.money -= price;
+        state.tricks[id] = true;
+      }
+    } else if (action === 'vehicle') {
+      const i = parseInt(btn.dataset.index, 10);
+      const owned = state.ownedVehicles[i];
+      if (!owned && state.money < VEHICLES[i].price) return;
+      if (!owned) {
+        state.money -= VEHICLES[i].price;
+        state.ownedVehicles[i] = true;
+      }
+      state.vehicleIndex = i;
+    }
+    save();
+    renderShop();
+    updateMoneyUI();
+  }
+  var shopPanelEl = document.getElementById('shopPanel');
+  var shopMenuBtnEl = document.getElementById('shopMenuBtn');
+  var shopPanelCloseBtnEl = document.getElementById('shopPanelCloseBtn');
+
+  function setShopPanelOpen(open) {
+    if (!shopPanelEl || !shopMenuBtnEl) return;
+    if (open) {
+      shopPanelEl.classList.remove('shop-panel-hidden');
+      shopPanelEl.style.display = '';
+      shopMenuBtnEl.classList.add('shop-menu-btn-hidden');
+      shopMenuBtnEl.style.display = 'none';
+    } else {
+      shopPanelEl.classList.add('shop-panel-hidden');
+      shopPanelEl.style.display = 'none';
+      shopMenuBtnEl.classList.remove('shop-menu-btn-hidden');
+      shopMenuBtnEl.style.display = '';
+    }
+    try { localStorage.setItem('pierFishing_shopOpen', open ? '1' : '0'); } catch (_) {}
+  }
+
+  if (shopMenuBtnEl) {
+    shopMenuBtnEl.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      setShopPanelOpen(true);
+    });
+  }
+  document.addEventListener('click', function(e) {
+    if (e.target && e.target.closest && e.target.closest('#shopMenuBtn')) {
+      setShopPanelOpen(true);
+    }
+  }, true);
+  if (shopPanelCloseBtnEl) {
+    shopPanelCloseBtnEl.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      setShopPanelOpen(false);
+    });
+  }
+
+  (function restoreShopState() {
+    try {
+      var saved = localStorage.getItem('pierFishing_shopOpen');
+      setShopPanelOpen(saved === '1');
+    } catch (_) {
+      setShopPanelOpen(false);
+    }
+  })();
+
+  document.getElementById('shopPanel').addEventListener('click', function(e) {
+    if (e.target.closest('#shopPanelCloseBtn')) return;
+    const tab = e.target && e.target.closest('.shopTab');
+    if (tab) {
+      e.preventDefault();
+      const tabName = tab.getAttribute('data-tab');
+      document.querySelectorAll('.shopTab').forEach(t => t.classList.toggle('active', t === tab));
+      document.getElementById('shopContent').classList.toggle('hidden', tabName !== 'shop');
+      document.getElementById('shopDiaryContent').classList.toggle('hidden', tabName !== 'diary');
+      document.getElementById('shopSettingsContent').classList.toggle('hidden', tabName !== 'settings');
+      if (tabName === 'diary') renderFishDiary();
+      if (tabName === 'settings') refreshSettingsUI();
+      return;
+    }
+    handleShopClick(e);
+  });
+  document.getElementById('shopPanel').addEventListener('mousedown', function(e) {
+    e.stopPropagation();
+  });
+  function refreshSettingsUI() {
+    const vol = Math.round((state.soundVolume != null ? state.soundVolume : 0.7) * 100);
+    const slider = document.getElementById('soundVolume');
+    const label = document.getElementById('soundVolumeValue');
+    if (slider) slider.value = vol;
+    if (label) label.textContent = vol + '%';
+  }
+  document.getElementById('restartBtnInSettings').addEventListener('click', function(e) {
+    e.stopPropagation();
+    resetGame();
+  });
+
+  function refreshStartMenu() {
+    const btn = document.getElementById('startMenuStartBtn');
+    const trophy = document.getElementById('startMenuTrophy');
+    if (btn) btn.textContent = localStorage.getItem('pierFishing') ? 'RESUME FISHING' : 'START ADVENTURE';
+    if (trophy) {
+      const d = state.fishDiary;
+      const b = d.bestCatchFish;
+      if (b && b.name) trophy.textContent = '🏆 BIGGEST CATCH: ' + b.name + ' — ' + b.weight.toFixed(1) + ' kg';
+      else trophy.textContent = '🏆 BIGGEST CATCH: —';
+    }
+  }
+  document.getElementById('startMenuStartBtn').addEventListener('click', function(e) {
+    e.stopPropagation();
+    state.menuActive = false;
+    document.getElementById('startMenuOverlay').classList.add('hidden');
+  });
+
+  document.getElementById('soundVolume').addEventListener('input', function() {
+    const pct = parseInt(this.value, 10);
+    state.soundVolume = pct / 100;
+    document.getElementById('soundVolumeValue').textContent = pct + '%';
+    setMusicVolume();
+    save();
+  });
+
+  function updateMoneyUI(bounce) {
+    const el = document.getElementById('moneyAmount');
+    if (el) el.textContent = '$' + state.money.toLocaleString();
+    const wrap = document.getElementById('moneyDisplay');
+    if (bounce && wrap) {
+      wrap.classList.remove('bounce');
+      wrap.offsetHeight;
+      wrap.classList.add('bounce');
+      setTimeout(() => wrap.classList.remove('bounce'), 500);
+    }
+  }
+
+  function showCatchPop(fish) {
+    const el = document.getElementById('catchPop');
+    const name = fish.type.name.toUpperCase().replace(/\s/g, ' ');
+    el.innerHTML = fish.type.emoji + ' ' + name + '<br><span style="font-size:1.1em;">$' + fish.value.toLocaleString() + '!!</span>';
+    el.classList.remove('show');
+    el.offsetHeight;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 1200);
+  }
+
+  function showCatchToast(fish) {
+    const el = document.getElementById('catchToast');
+    el.textContent = `+$${fish.value} ${fish.type.emoji} ${fish.type.name} (${fish.weight.toFixed(1)} kg)`;
+    el.style.color = '#2d5a2d';
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 2200);
+    addFloatingText(CW * 0.5, CH * 0.6, fish.value);
+    addSplash(CW * 0.5, WATER_Y, 18);
+    updateMoneyUI(true);
+  }
+
+  // ─── Draw ───────────────────────────────────────────────────────────
+  function drawSky() {
+    if (state.menuActive) {
+      const g = ctx.createLinearGradient(0, 0, 0, WATER_Y);
+      g.addColorStop(0, '#87ceeb');
+      g.addColorStop(0.6, '#b0d8f0');
+      g.addColorStop(1, '#7eb8da');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, CW, WATER_Y);
+      return;
+    }
+    const v = VEHICLES[state.vehicleIndex];
+    const id = v ? v.id : 'pier';
+    if (id === 'ufo') {
+      return;
+    }
+    if (id === 'trawler') {
+      const g = ctx.createLinearGradient(0, 0, 0, WATER_Y);
+      g.addColorStop(0, '#2a3a5a');
+      g.addColorStop(0.6, '#3a4a6a');
+      g.addColorStop(1, '#4a5a7a');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, CW, WATER_Y);
+      return;
+    }
+    const g = ctx.createLinearGradient(0, 0, 0, WATER_Y);
+    g.addColorStop(0, '#87ceeb');
+    g.addColorStop(0.6, '#b0d8f0');
+    g.addColorStop(1, '#7eb8da');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, CW, WATER_Y);
+  }
+
+  function drawWater() {
+    if (state.menuActive) {
+      const g = ctx.createLinearGradient(0, WATER_Y, 0, CH);
+      g.addColorStop(0, '#1a5f7a');
+      g.addColorStop(0.2, '#0d4a6a');
+      g.addColorStop(0.5, '#0a3d55');
+      g.addColorStop(0.8, '#062840');
+      g.addColorStop(1, '#031420');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, WATER_Y, CW, CH - WATER_Y);
+      const t = Date.now() / 400;
+      ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let x = 0; x <= CW + 80; x += 20) {
+        const y = WATER_Y + Math.sin(x * 0.02 + t) * 6 + Math.sin(x * 0.01 + t * 0.7) * 4;
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.lineTo(CW + 100, CH + 50);
+      ctx.lineTo(-20, CH + 50);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(100, 180, 220, 0.08)';
+      ctx.fill();
+      ctx.stroke();
+      return;
+    }
+    const v = VEHICLES[state.vehicleIndex];
+    const id = v ? v.id : 'pier';
+    if (id === 'ufo') {
+      const g = ctx.createLinearGradient(0, 0, 0, CH);
+      g.addColorStop(0, '#050818');
+      g.addColorStop(0.2, '#0a1025');
+      g.addColorStop(0.5, '#081830');
+      g.addColorStop(0.8, '#051025');
+      g.addColorStop(1, '#030810');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, CW, CH);
+      for (let i = 0; i < 12; i++) {
+        const ax = (i * 97) % CW + ((Date.now() / 3000) * 20) % 50;
+        const ay = (i * 73) % CH;
+        const gr = ctx.createRadialGradient(ax, ay, 0, ax, ay, 120);
+        gr.addColorStop(0, 'rgba(20, 80, 120, 0.08)');
+        gr.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = gr;
+        ctx.fillRect(ax - 120, ay - 120, 240, 240);
+      }
+      ctx.fillStyle = 'rgba(255,255,255,0.04)';
+      for (let i = 0; i < 25; i++) {
+        const bx = (i * 67 + Date.now() / 80) % (CW + 40) - 20;
+        const by = (i * 53 + Date.now() / 120) % CH;
+        ctx.beginPath();
+        ctx.arc(bx, by, 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      return;
+    }
+    if (id === 'trawler') {
+      const g = ctx.createLinearGradient(0, WATER_Y, 0, CH);
+      g.addColorStop(0, '#0d3a5a');
+      g.addColorStop(0.3, '#0a2d45');
+      g.addColorStop(0.7, '#061f35');
+      g.addColorStop(1, '#031525');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, WATER_Y, CW, CH - WATER_Y);
+      const t = Date.now() / 220;
+      ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      for (let x = 0; x <= CW + 100; x += 12) {
+        const y = WATER_Y + Math.sin(x * 0.04 + t) * 12 + Math.sin(x * 0.022 + t * 1.3) * 7 + Math.sin(x * 0.01 + t * 0.7) * 4;
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.lineTo(CW + 120, CH + 80);
+      ctx.lineTo(-30, CH + 80);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(80, 140, 200, 0.08)';
+      ctx.fill();
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      for (let x = 0; x <= CW + 100; x += 18) {
+        const y = WATER_Y + 5 + Math.sin(x * 0.035 + t * 1.1) * 8 + Math.sin(x * 0.018 + t * 0.9) * 5;
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.lineTo(CW + 120, CH + 80);
+      ctx.lineTo(-30, CH + 80);
+      ctx.closePath();
+      ctx.stroke();
+      return;
+    }
+    const g = ctx.createLinearGradient(0, WATER_Y, 0, CH);
+    g.addColorStop(0, '#1a5f7a');
+    g.addColorStop(0.2, '#0d4a6a');
+    g.addColorStop(0.5, '#0a3d55');
+    g.addColorStop(0.8, '#062840');
+    g.addColorStop(1, '#031420');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, WATER_Y, CW, CH - WATER_Y);
+    const t = Date.now() / 400;
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let x = 0; x <= CW + 80; x += 20) {
+      const y = WATER_Y + Math.sin(x * 0.02 + t) * 6 + Math.sin(x * 0.01 + t * 0.7) * 4;
+      if (x === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.lineTo(CW + 100, CH + 50);
+    ctx.lineTo(-20, CH + 50);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(100, 180, 220, 0.08)';
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  function drawPier() {
+    const id = (VEHICLES[state.vehicleIndex] && VEHICLES[state.vehicleIndex].id) || 'pier';
+    if (id !== 'pier' && id !== 'surfboard') return;
+    const wood = '#5c4033';
+    const dark = '#4a3528';
+    const light = '#6b5344';
+    ctx.fillStyle = wood;
+    ctx.fillRect(0, PIER_Y, pierW, PIER_THICKNESS);
+    const plankH = 10;
+    for (let i = 0; i < 12; i++) {
+      const x = (i % 2) * 3 + Math.floor(i / 2) * 18;
+      const y = PIER_Y + 4 + Math.floor(i / 2) * plankH;
+      if (y >= PIER_Y + PIER_THICKNESS) break;
+      ctx.fillStyle = i % 2 ? dark : light;
+      ctx.fillRect(x, y, 16, plankH - 1);
+    }
+    ctx.fillStyle = '#7a6040';
+    ctx.fillRect(0, PIER_Y, pierW, 4);
+    ctx.fillStyle = 'rgba(0,0,0,0.12)';
+    ctx.fillRect(0, PIER_Y + 4, pierW, 1);
+  }
+
+  function drawSurfboard() {
+    const platform = getPlatform();
+    if (platform.id !== 'surfboard') return;
+    const bx = platform.boardX;
+    const bw = platform.boardW;
+    const by = WATER_Y - 6;
+    const bobbing = Math.sin(Date.now() / 400) * 3;
+    ctx.save();
+    ctx.translate(bx, by + bobbing);
+    ctx.fillStyle = '#f0e6d8';
+    ctx.strokeStyle = '#d0c0a8';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, bw / 2, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#2a4a7a';
+    ctx.fillRect(-bw/4, -2, bw/2, 4);
+    ctx.restore();
+  }
+
+  function drawTrawlerBoat() {
+    const platform = getPlatform();
+    if (platform.id !== 'trawler') return;
+    const deckY = platform.deckY;
+    const cx = platform.boatCenter;
+    const boatW = 320;
+    const bobbing = Math.sin(Date.now() / 350) * 2;
+    const hullDepth = 26;
+    const hullBottom = WATER_Y + hullDepth;
+
+    ctx.save();
+    ctx.translate(0, bobbing);
+
+    ctx.fillStyle = '#2a1a0a';
+    ctx.beginPath();
+    ctx.moveTo(cx - boatW/2 + 10, deckY + 14);
+    ctx.lineTo(cx + boatW/2 - 10, deckY + 14);
+    ctx.lineTo(cx + boatW/2 - 20, hullBottom);
+    ctx.lineTo(cx + 10, hullBottom + 3);
+    ctx.lineTo(cx - 10, hullBottom + 3);
+    ctx.lineTo(cx - boatW/2 + 20, hullBottom);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#1a1208';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.fillStyle = '#5a4a3a';
+    ctx.fillRect(cx - boatW/2, deckY, boatW, 14);
+    ctx.fillStyle = '#6a5a4a';
+    ctx.fillRect(cx - boatW/2, deckY + 12, boatW, 2);
+    ctx.fillStyle = '#7a6a5a';
+    ctx.fillRect(cx - 28, deckY - 40, 56, 40);
+    ctx.fillStyle = '#8a7a6a';
+    ctx.fillRect(cx - 23, deckY - 36, 46, 32);
+    ctx.fillStyle = '#1a3a5a';
+    ctx.fillRect(cx - 7, deckY - 34, 14, 10);
+    ctx.fillStyle = '#2a2a2a';
+    ctx.fillRect(cx - boatW/2 + 12, deckY + 2, 22, 7);
+    ctx.fillRect(cx + boatW/2 - 34, deckY + 2, 22, 7);
+    ctx.restore();
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+    ctx.fillRect(cx - boatW/2 - 8, WATER_Y, boatW + 16, 3);
+  }
+
+  function drawDeepSeaPlatform() {
+    const platform = getPlatform();
+    if (platform.id !== 'ufo') return;
+    const deckY = platform.deckY;
+    const cx = CW * 0.22;
+    const t = Date.now() / 1200;
+    const pulse = 0.65 + 0.35 * Math.sin(t) * Math.sin(t * 1.3);
+    const bob = Math.sin(Date.now() / 800) * 2;
+
+    const saucerW = 76;
+    const saucerH = 22;
+    const domeW = 42;
+    const domeH = 24;
+    const centerY = deckY + 28 + bob;
+
+    // Glow underneath (classic UFO beam effect)
+    const glowG = ctx.createRadialGradient(cx, centerY + saucerH + 25, 0, cx, centerY + saucerH + 25, 85);
+    glowG.addColorStop(0, 'rgba(100, 180, 255, 0.2)');
+    glowG.addColorStop(0.4, 'rgba(60, 140, 220, 0.08)');
+    glowG.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = glowG;
+    ctx.beginPath();
+    ctx.ellipse(cx, centerY + saucerH + 28, 80, 35, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Main saucer disc (bottom half – metallic hull)
+    const hullG = ctx.createLinearGradient(cx - saucerW, centerY, cx + saucerW, centerY);
+    hullG.addColorStop(0, '#5a5a6a');
+    hullG.addColorStop(0.2, '#7a7a8e');
+    hullG.addColorStop(0.5, '#8e8ea0');
+    hullG.addColorStop(0.8, '#6e6e80');
+    hullG.addColorStop(1, '#4a4a58');
+    ctx.fillStyle = hullG;
+    ctx.beginPath();
+    ctx.ellipse(cx, centerY + saucerH * 0.5, saucerW, saucerH, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Top half of saucer (curved upper hull)
+    const topHullG = ctx.createLinearGradient(cx, centerY - 25, cx, centerY + 15);
+    topHullG.addColorStop(0, '#6a6a7a');
+    topHullG.addColorStop(0.5, '#8a8a9c');
+    topHullG.addColorStop(1, '#5c5c6c');
+    ctx.fillStyle = topHullG;
+    ctx.beginPath();
+    ctx.ellipse(cx, centerY - 2, saucerW, saucerH + 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Dome (cockpit) – classic UFO bubble
+    const domeG = ctx.createRadialGradient(cx - 8, centerY - domeH - 5, 0, cx, centerY, domeW);
+    domeG.addColorStop(0, 'rgba(180, 200, 230, 0.85)');
+    domeG.addColorStop(0.4, 'rgba(120, 150, 200, 0.6)');
+    domeG.addColorStop(0.8, 'rgba(80, 100, 150, 0.5)');
+    domeG.addColorStop(1, 'rgba(60, 80, 120, 0.4)');
+    ctx.fillStyle = domeG;
+    ctx.beginPath();
+    ctx.ellipse(cx, centerY - domeH, domeW, domeH, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Dome highlight (glass reflection)
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+    ctx.beginPath();
+    ctx.ellipse(cx - 10, centerY - domeH - 4, 12, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Ring of lights on bottom rim (classic UFO lights)
+    const lightY = centerY + saucerH + 4;
+    const numLights = 12;
+    ctx.shadowColor = 'rgba(100, 200, 255, 0.95)';
+    ctx.shadowBlur = 10;
+    for (let i = 0; i < numLights; i++) {
+      const angle = (i / numLights) * Math.PI * 2 + (Date.now() / 2000) * 0.5;
+      const lx = cx + Math.cos(angle) * (saucerW - 4);
+      const ly = lightY + Math.sin(angle) * 6;
+      const phase = (i * 0.7 + t * 2) % (Math.PI * 2);
+      const bright = 0.5 + 0.5 * Math.sin(phase);
+      ctx.fillStyle = i % 3 === 0 ? 'rgba(255, 120, 80, ' + bright + ')' : (i % 3 === 1 ? 'rgba(80, 255, 180, ' + bright + ')' : 'rgba(120, 180, 255, ' + bright + ')');
+      ctx.beginPath();
+      ctx.arc(lx, ly, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+
+    // Center belly light
+    ctx.fillStyle = 'rgba(180, 220, 255, ' + pulse * 0.7 + ')';
+    ctx.shadowColor = 'rgba(150, 220, 255, 0.9)';
+    ctx.shadowBlur = 14;
+    ctx.beginPath();
+    ctx.arc(cx, lightY + 6, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Rim line (seam between top and bottom)
+    ctx.strokeStyle = 'rgba(200, 210, 230, 0.35)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.ellipse(cx, centerY, saucerW - 2, saucerH - 2, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  function drawFisherman() {
+    const rod = RODS[state.rodIndex];
+    const rodLen = 38 * rod.length;
+    const platform = getPlatform();
+    const baseX = platform.baseX;
+    const x = baseX + state.fishermanOffsetX;
+    const y = platform.platformY;
+    const t = Date.now() / 1000;
+    const jig = state.trickActive === 'powerJig' ? Math.sin(t * 8) * 5 : 0;
+    const deepSink = state.trickActive === 'deepSink';
+    let lean = deepSink ? 4 : 0;
+    const rodAngleDrop = deepSink ? 6 : 0;
+    const straining = state.fishOn && state.reelSpeed > 0 && state.currentFish && state.currentFish.weight >= HEAVY_FISH_KG;
+    if (straining) lean -= 6;
+
+    ctx.save();
+    ctx.translate(x, y);
+    const r = 4;
+    const w = 32;
+    const h = 50;
+    const cx = 18 + lean;
+
+    ctx.fillStyle = '#4a3a28';
+    ctx.fillRect(4, 36, w - 4, 14);
+    ctx.strokeStyle = '#3a2a18';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(4, 36, w - 4, 14);
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(4, 48, 10, 6);
+    ctx.fillRect(20, 48, 10, 6);
+
+    ctx.fillStyle = '#5a4a2a';
+    ctx.beginPath();
+    ctx.moveTo(4 + r, 28);
+    ctx.lineTo(4 + w - r, 28);
+    ctx.quadraticCurveTo(4 + w, 28, 4 + w, 28 + r);
+    ctx.lineTo(4 + w, 36 - r);
+    ctx.quadraticCurveTo(4 + w, 36, 4 + w - r, 36);
+    ctx.lineTo(4 + r, 36);
+    ctx.quadraticCurveTo(4, 36, 4, 36 - r);
+    ctx.lineTo(4, 28 + r);
+    ctx.quadraticCurveTo(4, 28, 4 + r, 28);
+    ctx.fill();
+    ctx.strokeStyle = '#4a3a2a';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    for (let stripe = 0; stripe < 4; stripe++) {
+      ctx.fillStyle = stripe % 2 ? '#e8f0f8' : '#2a4a7a';
+      ctx.fillRect(6, 29 + stripe * 2, w - 8, 1.5);
+    }
+
+    ctx.fillStyle = '#4a5a3a';
+    ctx.beginPath();
+    ctx.moveTo(8, 28);
+    ctx.lineTo(4 + w - 8, 28);
+    ctx.lineTo(4 + w - 6, 35);
+    ctx.lineTo(10, 35);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#3a4a2a';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+    ctx.fillStyle = '#3a4a2a';
+    ctx.fillRect(14, 29, 4, 3);
+    ctx.fillRect(22, 29, 4, 3);
+
+    ctx.fillStyle = '#e8c4a0';
+    ctx.beginPath();
+    ctx.ellipse(cx, 18, 13, 15, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#d4a878';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+    ctx.fillStyle = '#2c2416';
+    ctx.beginPath();
+    ctx.ellipse(cx, 14, 8, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#1a1a1a';
+    ctx.beginPath();
+    ctx.arc(cx - 4, 13, 1.5, 0, Math.PI * 2);
+    ctx.arc(cx + 4, 13, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#2a2018';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(cx, 17, 4, 0.2 * Math.PI, 0.8 * Math.PI);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(107, 83, 68, 0.9)';
+    ctx.beginPath();
+    ctx.ellipse(cx, 20, 8, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#5c4033';
+    ctx.beginPath();
+    ctx.ellipse(cx, 21, 6, 4, 0, 0, Math.PI);
+    ctx.fill();
+
+    ctx.fillStyle = '#d4a820';
+    ctx.beginPath();
+    ctx.ellipse(cx, 6, 14, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#b89820';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+    ctx.fillStyle = '#c49818';
+    ctx.fillRect(2, 8, 32, 5);
+    ctx.beginPath();
+    ctx.ellipse(cx, 10.5, 16, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    const tipX = 28 + rodLen * 0.92 + jig;
+    const tipY = 14 + rodAngleDrop - jig * 0.3;
+    if (rod.style === 'stick') {
+      ctx.strokeStyle = '#5c4033';
+      ctx.lineWidth = 4;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(32, 30);
+      ctx.quadraticCurveTo(32 + rodLen * 0.4, 24, 28 + rodLen * 0.75, 18);
+      ctx.quadraticCurveTo(28 + rodLen * 0.95, 15, tipX, tipY);
+      ctx.stroke();
+      ctx.fillStyle = '#4a3528';
+      ctx.beginPath();
+      ctx.arc(tipX, tipY, 3, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (rod.style === 'fiberglass') {
+      ctx.strokeStyle = rod.color;
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(32, 30);
+      ctx.lineTo(28 + rodLen * 0.65, 20);
+      ctx.lineTo(tipX, tipY);
+      ctx.stroke();
+      ctx.fillStyle = '#2a3a4a';
+      ctx.fillRect(30, 26, 8, 6);
+      ctx.fillStyle = '#1a1a1a';
+      ctx.beginPath();
+      ctx.arc(tipX, tipY, 3, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (rod.style === 'carbon') {
+      ctx.strokeStyle = '#1a1a1a';
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(32, 30);
+      ctx.lineTo(28 + rodLen * 0.5, 22);
+      ctx.lineTo(tipX, tipY);
+      ctx.stroke();
+      ctx.strokeStyle = rod.color;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(32, 29.5);
+      ctx.lineTo(28 + rodLen * 0.5, 21.5);
+      ctx.lineTo(tipX, tipY - 0.5);
+      ctx.stroke();
+      ctx.fillStyle = '#1a1a1a';
+      ctx.beginPath();
+      ctx.arc(tipX, tipY, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.strokeStyle = rod.color;
+      ctx.lineWidth = 4;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(32, 30);
+      ctx.lineTo(28 + rodLen * 0.6, 20);
+      ctx.lineTo(tipX, tipY);
+      ctx.stroke();
+      ctx.fillStyle = '#3a2a0a';
+      ctx.beginPath();
+      ctx.arc(34, 28, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#6a5a2a';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.fillStyle = '#1a1a1a';
+      ctx.beginPath();
+      ctx.arc(tipX, tipY, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+
+    state.rodTipX = x + tipX;
+    state.rodTipY = y + tipY;
+
+    if (state.trickActive) {
+      ctx.save();
+      ctx.font = 'bold 12px "Patrick Hand"';
+      ctx.textAlign = 'center';
+      const badgeY = y - 8;
+      const label = state.trickActive === 'powerJig' ? 'POWER JIG' : 'DEEP SINK';
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      ctx.fillRect(x + 14 - 28, badgeY - 10, 56, 14);
+      ctx.strokeStyle = state.trickActive === 'powerJig' ? '#ffaa00' : '#00aaff';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(x + 14 - 28, badgeY - 10, 56, 14);
+      ctx.fillStyle = '#fff';
+      ctx.fillText(label, x + 14, badgeY);
+      ctx.restore();
+    }
+
+    if (state.fishOn) {
+      const barW = 70;
+      const barH = 10;
+      const barX = x + 14 - barW / 2;
+      const barY = y - 38;
+      ctx.fillStyle = 'rgba(0,0,0,0.7)';
+      ctx.fillRect(barX - 2, barY - 2, barW + 4, barH + 4);
+      const g = ctx.createLinearGradient(barX, 0, barX + barW, 0);
+      g.addColorStop(0, '#6080a0');
+      g.addColorStop(TENSION_GREEN_LO, '#6080a0');
+      g.addColorStop(TENSION_GREEN_LO, '#2a8a2a');
+      g.addColorStop(TENSION_GREEN_HI, '#2a8a2a');
+      g.addColorStop(TENSION_GREEN_HI, '#c03030');
+      g.addColorStop(1, '#c03030');
+      ctx.fillStyle = g;
+      ctx.fillRect(barX, barY, barW, barH);
+      const needleX = barX + state.tension * barW;
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.moveTo(needleX, barY - 3);
+      ctx.lineTo(needleX + 4, barY + barH / 2);
+      ctx.lineTo(needleX, barY + barH + 3);
+      ctx.lineTo(needleX - 4, barY + barH / 2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.font = '10px "Patrick Hand"';
+      ctx.fillStyle = '#fff';
+      ctx.fillText('TENSION', barX + barW / 2 - 18, barY - 5);
+    }
+  }
+
+  function drawLine() {
+    const plat = getPlatform();
+    const rodTipX = state.rodTipX != null ? state.rodTipX : plat.baseX + 55;
+    const rodTipY = state.rodTipY != null ? state.rodTipY : plat.platformY + 28;
+    if (!state.lineCast) return;
+
+    const progress = Math.min(1, state.lineLength / state.lineTargetLength);
+    const hookY = WATER_Y + (CH - WATER_Y) * 0.7 * progress * state.hookDepth;
+    const hx = rodTipX + 15;
+    const t = Date.now() / 320;
+    const bobberY = WATER_Y + 6 + Math.sin(t) * 8;
+    const bobberTilt = Math.sin(t * 1.1) * 0.15;
+
+    ctx.strokeStyle = '#444';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(rodTipX, rodTipY);
+    const midX = rodTipX + 30;
+    const midY = (rodTipY + hookY) / 2;
+    ctx.quadraticCurveTo(midX, midY, hx, hookY);
+    ctx.stroke();
+
+    ctx.save();
+    ctx.translate(hx - 2, bobberY);
+    ctx.rotate(bobberTilt);
+    ctx.fillStyle = '#c41e3a';
+    ctx.strokeStyle = '#8b0000';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.ellipse(2, 0, 6, 12, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(hx, hookY);
+    ctx.strokeStyle = '#2a2a2a';
+    ctx.lineWidth = 1.8;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(0, 10);
+    ctx.quadraticCurveTo(0, 18, 8, 14);
+    ctx.lineTo(10, 12);
+    ctx.stroke();
+    ctx.restore();
+
+    if (state.fishOn && state.currentFish) {
+      ctx.font = '28px "Patrick Hand"';
+      ctx.fillText(state.currentFish.type.emoji, rodTipX - 8, hookY - 12);
+    }
+
+    state.hookY = hookY;
+  }
+
+  function drawParticles() {
+    for (const p of particles) {
+      if (p.life <= 0) continue;
+      ctx.fillStyle = 'rgba(200, 230, 255, ' + Math.max(0, p.life) + ')';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  function drawFloatingTexts() {
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 22px "Patrick Hand"';
+    for (const f of floatingTexts) {
+      if (f.life <= 0) continue;
+      ctx.fillStyle = 'rgba(255, 215, 0, ' + Math.max(0, f.life) + ')';
+      ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+      ctx.lineWidth = 2;
+      ctx.strokeText('+$' + f.text, f.x, f.y);
+      ctx.fillText('+$' + f.text, f.x, f.y);
+    }
+    ctx.restore();
+  }
+
+  document.getElementById('fellInOverlay').addEventListener('click', function() {
+    this.classList.remove('show');
+    state.fellIn = false;
+    state.fishermanOffsetX = 0;
+  });
+
+  function updateMenu(dt) {
+    const now = Date.now() / 1000;
+    if (now >= menuNextJumpAt) {
+      menuJumpingFish.push({
+        x: pierW + 60 + Math.random() * (CW - pierW - 120),
+        y: WATER_Y,
+        vx: (Math.random() - 0.5) * 40,
+        vy: -85 - Math.random() * 45,
+        life: 1
+      });
+      menuNextJumpAt = now + 5 + Math.random() * 5;
+    }
+    for (let i = menuJumpingFish.length - 1; i >= 0; i--) {
+      const f = menuJumpingFish[i];
+      f.vy += 220 * dt;
+      f.x += f.vx * dt;
+      f.y += f.vy * dt;
+      if (f.y > WATER_Y + 4) {
+        addSplash(f.x, WATER_Y, 8);
+        menuJumpingFish.splice(i, 1);
+      }
+    }
+    if (menuTeaseUntil > 0 && now > menuTeaseUntil) {
+      menuTeaseType = null;
+      menuTeaseUntil = 0;
+      menuNextTeaseAt = now + 30 + Math.random() * 30;
+    }
+    if (menuTeaseUntil <= 0 && now >= menuNextTeaseAt) {
+      menuNextTeaseAt = now + 30 + Math.random() * 30;
+      menuTeaseType = Math.random() < 0.5 ? 'shark' : 'ufo';
+      menuTeaseUntil = now + (menuTeaseType === 'shark' ? 4 : 3);
+      menuTeaseX = menuTeaseType === 'shark' ? -80 : -60;
+    }
+    if (menuTeaseType === 'shark') menuTeaseX += 55 * dt;
+    if (menuTeaseType === 'ufo') menuTeaseX += 180 * dt;
+    menuIdlePhase += dt * 0.4;
+    menuIdleLean = Math.sin(menuIdlePhase) * 3;
+  }
+
+  function drawMenuFisherman() {
+    const x = pierW - 42;
+    const y = PIER_Y - 38;
+    const lean = menuIdleLean;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.fillStyle = '#4a3a28';
+    ctx.beginPath();
+    ctx.ellipse(18 + lean, 42, 12, 16, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#3d3020';
+    ctx.fillRect(14 + lean, 28, 10, 22);
+    ctx.fillRect(22 + lean, 30, 8, 18);
+    ctx.fillStyle = '#5c4033';
+    ctx.fillRect(28 + lean, 22, 4, 28);
+    ctx.strokeStyle = '#4a3528';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(30 + lean, 24);
+    ctx.lineTo(30 + lean + 18, 14);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawMenuJumpingFish() {
+    menuJumpingFish.forEach(f => {
+      if (f.y > WATER_Y) return;
+      ctx.save();
+      ctx.translate(f.x, f.y);
+      ctx.fillStyle = 'rgba(30, 60, 90, 0.9)';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 14, 6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    });
+  }
+
+  function drawMenuTease() {
+    if (!menuTeaseType) return;
+    ctx.save();
+    if (menuTeaseType === 'shark') {
+      const finH = 28;
+      const finW = 22;
+      ctx.fillStyle = 'rgba(40, 50, 60, 0.85)';
+      ctx.beginPath();
+      ctx.moveTo(menuTeaseX, WATER_Y - 2);
+      ctx.lineTo(menuTeaseX + finW * 0.5, WATER_Y - finH);
+      ctx.lineTo(menuTeaseX + finW, WATER_Y - 2);
+      ctx.closePath();
+      ctx.fill();
+    } else {
+      const ux = menuTeaseX;
+      const uy = 80 + Math.sin(Date.now() / 200) * 5;
+      ctx.shadowColor = 'rgba(150, 200, 255, 0.8)';
+      ctx.shadowBlur = 12;
+      ctx.fillStyle = 'rgba(180, 220, 255, 0.6)';
+      ctx.beginPath();
+      ctx.ellipse(ux, uy, 18, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+    ctx.restore();
+  }
+
+  // ─── Game loop ──────────────────────────────────────────────────────
+  function update(dt) {
+    if (state.menuActive) {
+      updateMenu(dt);
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx * dt * 8;
+        p.y += p.vy * dt * 8;
+        p.vy += 12 * dt;
+        p.life -= dt * 1.5;
+        if (p.life <= 0) particles.splice(i, 1);
+      }
+      return;
+    }
+    if (state.lineCast && state.keysHeld.shift && state.keysHeld.a && state.tricks.powerJig) state.trickActive = 'powerJig';
+    else if (state.lineCast && state.keysHeld.shift && state.keysHeld.s && state.tricks.deepSink) state.trickActive = 'deepSink';
+    else state.trickActive = null;
+    updateMusicTension();
+    if (state.fellIn) {
+      for (let i = floatingTexts.length - 1; i >= 0; i--) {
+        floatingTexts[i].y += floatingTexts[i].vy * dt;
+        floatingTexts[i].vy *= 0.98;
+        floatingTexts[i].life -= dt * 0.8;
+        if (floatingTexts[i].life <= 0) floatingTexts.splice(i, 1);
+      }
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx * dt * 8;
+        p.y += p.vy * dt * 8;
+        p.vy += 12 * dt;
+        p.life -= dt * 1.5;
+        if (p.life <= 0) particles.splice(i, 1);
+      }
+      return;
+    }
+    const prevHookY = state.hookY || 0;
+    if (state.lineCast) {
+      if (!state.fishOn) {
+        if (state.reelSpeed > 0) {
+          state.lineLength = Math.max(0, state.lineLength - 80 * dt * state.reelSpeed);
+          state.reelSpeed *= 0.96;
+          if (state.reelSpeed < 0.02) state.reelSpeed = 0;
+          if (state.lineLength <= 0) {
+            state.lineCast = false;
+            state.lineLength = 0;
+            state.reelSpeed = 0;
+          }
+        } else {
+          state.lineLength += 55 * dt;
+          if (state.lineLength >= state.lineTargetLength) state.lineLength = state.lineTargetLength;
+          const hy = getHookY();
+          if (state.lastHookY > 0 && state.lastHookY < WATER_Y && state.splashCooldown <= 0) {
+            const rodLen = 38 * RODS[state.rodIndex].length;
+            const plat = getPlatform();
+            const tipX = plat.baseX + 28 + rodLen * 0.95;
+            addSplash(tipX, WATER_Y, 12);
+            state.splashCooldown = 15;
+          }
+          state.lastHookY = hy;
+          if (state.splashCooldown > 0) state.splashCooldown--;
+          tryBite();
+        }
+      } else {
+        const tensionMult = getTrawlerTensionMult();
+        state.tension = Math.min(1, state.tension + TENSION_DRIFT_UP * tensionMult * dt);
+        if (state.tension >= 1) {
+          state.fishOn = false;
+          state.currentFish = null;
+          state.lineCast = false;
+          state.lineLength = 0;
+          state.reelSpeed = 0;
+          state.tension = 0.5;
+          const el = document.getElementById('catchToast');
+          el.textContent = '💥 Line snapped!';
+          el.style.color = '#8b2a2a';
+          el.classList.add('show');
+          setTimeout(() => { el.classList.remove('show'); el.style.color = ''; }, 1800);
+        } else if (state.tension <= 0) {
+          state.fishOn = false;
+          state.currentFish = null;
+          state.lineCast = false;
+          state.lineLength = 0;
+          const el = document.getElementById('catchToast');
+          el.textContent = 'The fish got away!';
+          el.style.color = '#8b4a2a';
+          el.classList.add('show');
+          setTimeout(() => { el.classList.remove('show'); el.style.color = ''; }, 1800);
+        } else {
+          const pullMult = (getPlatform().id === 'trawler') ? TRAWLER_PULL_MULT : 1;
+          state.fishermanOffsetX += state.currentFish.weight * PULL_PER_KG * pullMult * dt;
+          if (state.reelSpeed > 0) state.fishermanOffsetX = Math.max(0, state.fishermanOffsetX - RECOVER_PER_SEC * dt);
+          const edge = (getPlatform().fellInEdge != null) ? getPlatform().fellInEdge : FELL_IN_EDGE;
+          if (state.fishermanOffsetX >= edge) {
+            state.fellIn = true;
+            state.fishOn = false;
+            state.currentFish = null;
+            state.lineCast = false;
+            state.lineLength = 0;
+            state.fishermanOffsetX = 0;
+            document.getElementById('fellInOverlay').classList.add('show');
+            return;
+          }
+          if (state.reelSpeed > 0) {
+            const reelMult = (getPlatform().id === 'trawler' && state.currentFish) ? TRAWLER_REEL_MULT : 1;
+            state.lineLength = Math.max(0, state.lineLength - 80 * reelMult * dt * state.reelSpeed);
+            state.reelSpeed *= 0.96;
+            if (state.reelSpeed < 0.02) state.reelSpeed = 0;
+            if (state.lineLength <= 0) {
+              state.money += state.currentFish.value;
+              recordFishCatch(state.currentFish);
+              soundCatch();
+              showCatchPop(state.currentFish);
+              showCatchToast(state.currentFish);
+              state.fishOn = false;
+              state.currentFish = null;
+              state.lineCast = false;
+              state.lineLength = 0;
+              state.reelSpeed = 0;
+              state.fishermanOffsetX = 0;
+              state.spookCooldown = SPOOK_DURATION;
+              save();
+              updateMoneyUI(true);
+              renderShop();
+              renderFishDiary();
+            }
+          }
+        }
+      }
+    }
+    if (state.spookCooldown > 0) state.spookCooldown = Math.max(0, state.spookCooldown - dt);
+    for (let i = floatingTexts.length - 1; i >= 0; i--) {
+      floatingTexts[i].y += floatingTexts[i].vy * dt;
+      floatingTexts[i].vy *= 0.98;
+      floatingTexts[i].life -= dt * 0.8;
+      if (floatingTexts[i].life <= 0) floatingTexts.splice(i, 1);
+    }
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.x += p.vx * dt * 8;
+      p.y += p.vy * dt * 8;
+      p.vy += 12 * dt;
+      p.life -= dt * 1.5;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+  }
+
+  function gameLoop(t) {
+    const dt = Math.min((t - (gameLoop.last || t)) / 1000, 0.1);
+    gameLoop.last = t;
+    update(dt);
+
+    if (state.menuActive) {
+      drawSky();
+      drawWater();
+      drawPier();
+      drawMenuFisherman();
+      drawMenuJumpingFish();
+      drawMenuTease();
+      drawParticles();
+      requestAnimationFrame(gameLoop);
+      return;
+    }
+
+    drawSky();
+    drawWater();
+    drawPier();
+    const plat = getPlatform();
+    if (plat.id === 'surfboard') drawSurfboard();
+    else if (plat.id === 'trawler') drawTrawlerBoat();
+    else if (plat.id === 'ufo') drawDeepSeaPlatform();
+    drawFisherman();
+    drawLine();
+    if (state.spookCooldown > 0) {
+      ctx.save();
+      ctx.font = '12px "Patrick Hand"';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = 'rgba(200, 150, 100, ' + (0.4 + 0.3 * Math.min(1, state.spookCooldown / 2)) + ')';
+      ctx.fillText('Fish spooked...', pierW * 0.5, PIER_Y - 4);
+      ctx.restore();
+    }
+    drawParticles();
+    drawFloatingTexts();
+
+    requestAnimationFrame(gameLoop);
+  }
+
+  // ─── Input ──────────────────────────────────────────────────────────
+  document.addEventListener('keydown', e => {
+    if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') state.keysHeld.shift = true;
+    if (e.code === 'KeyA') state.keysHeld.a = true;
+    if (e.code === 'KeyS') state.keysHeld.s = true;
+    if (state.menuActive) return;
+    if (!musicStarted) startMusic();
+    if (e.code === 'Space') {
+      e.preventDefault();
+      if (state.lineCast) reel();
+      else cast();
+    }
+  });
+
+  document.addEventListener('keyup', e => {
+    if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') state.keysHeld.shift = false;
+    if (e.code === 'KeyA') state.keysHeld.a = false;
+    if (e.code === 'KeyS') state.keysHeld.s = false;
+  });
+
+  document.addEventListener('click', (e) => {
+    if (state.menuActive) return;
+    if (e.target.closest('#shopPanel') || e.target.closest('#shopMenuBtn') || e.target.closest('#moneyDisplay') || e.target.closest('#startMenuOverlay')) return;
+    if (!musicStarted) startMusic();
+    if (e.target !== canvas) return;
+    if (state.lineCast) reel();
+    else cast();
+  });
+
+  window.addEventListener('resize', () => {
+    resizeCanvas();
+  });
+
+  // ─── Init ───────────────────────────────────────────────────────────
+  resizeCanvas();
+  load();
+  updateMoneyUI();
+  renderShop();
+  refreshSettingsUI();
+  refreshStartMenu();
+  menuNextJumpAt = Date.now() / 1000 + 2 + Math.random() * 4;
+  menuNextTeaseAt = Date.now() / 1000 + 20 + Math.random() * 25;
+  requestAnimationFrame(gameLoop);
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(function () {});
+  }
+
+  window.pierFishing = {
+    get state() { return state; },
+    setMoney(n) { state.money = Math.max(0, n); updateMoneyUI(); save(); },
+    save: save,
+    refreshUI() { renderShop(); updateMoneyUI(); },
+    unlockAll() {
+      state.money = 999999;
+      state.ownedRods.fill(true);
+      state.ownedBaits.fill(true);
+      state.tricks.powerJig = true;
+      state.tricks.deepSink = true;
+      state.ownedVehicles.fill(true);
+      save();
+      renderShop();
+      updateMoneyUI();
+    }
+  };
+})();
+  </script>
+</body>
+</html>
